@@ -1,7 +1,7 @@
 from re import findall
 
 import discord
-from discord.ext.commands import Context, command, group
+from discord.ext.commands import Context, command, group, cooldown, BucketType
 
 from utils import Cog
 
@@ -21,19 +21,23 @@ class Fun(Cog):
         )
 
     @group(invoke_without_command=True)
-    async def poll(self, ctx: Context, question, choice1, choice2):
+    @cooldown(1, 60, BucketType.channel)
+    async def poll(self, ctx: Context, question: str, *choices: str):
         """Create a poll."""
+        to_emoji = lambda key: chr(0x1F1E6 + key)
+        body = "\n".join(f"{to_emoji(i)}: {choice}" for i, choice in enumerate(choices[:5]))
+
         message = await ctx.send(
             embed=discord.Embed(
-                title=f"Poll | {question}",
-                description=f":a: {choice1}\n:b: {choice2}",
+                title=f"Poll: {question}",
+                description=body,
                 color=discord.Color.brand_red(),
             ).set_author(
                 name=ctx.author.display_name, icon_url=ctx.author.display_avatar
             )
         )
-        await message.add_reaction("🅰")
-        await message.add_reaction("🅱")
+        for i, _ in enumerate(choices[:5]):
+            await message.add_reaction(to_emoji(i))
 
     @poll.command()
     async def yesno(self, ctx: Context, *, question):
